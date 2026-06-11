@@ -393,6 +393,10 @@ a {
 }
 
 .leaflet-container {
+  /* must fill the .map wrapper — without an explicit height the container
+     collapses to 0 (all tiles inside are absolutely positioned) */
+  height: 100%;
+  width: 100%;
   background: #1a1a20;
   font: inherit;
 }
