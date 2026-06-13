@@ -49,17 +49,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async () => {
     setError(null)
-    sessionStorage.setItem(RETURN_KEY, window.location.pathname + window.location.search)
     try {
-      // Redirect is the reliable flow inside an installed iOS PWA; popup often
-      // gets blocked there. Fall back to popup if redirect can't start.
-      await signInWithRedirect(auth, googleProvider)
-    } catch {
-      try {
-        await signInWithPopup(auth, googleProvider)
-      } catch (e) {
-        setError((e as Error)?.message ?? 'Sign-in failed')
+      // Popup is the reliable flow: signInWithRedirect breaks in installed PWAs
+      // because browsers block the cross-site (firebaseapp.com) storage it needs
+      // to read the result back. Popup returns the credential directly.
+      await signInWithPopup(auth, googleProvider)
+    } catch (e) {
+      const code = (e as { code?: string })?.code ?? ''
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        return // user dismissed it; let them tap again
       }
+      // Popup blocked / unsupported in this environment → fall back to redirect.
+      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+        sessionStorage.setItem(RETURN_KEY, window.location.pathname + window.location.search)
+        try {
+          await signInWithRedirect(auth, googleProvider)
+        } catch (e2) {
+          setError((e2 as Error)?.message ?? 'Sign-in failed')
+        }
+        return
+      }
+      setError((e as Error)?.message ?? 'Sign-in failed')
     }
   }
 
