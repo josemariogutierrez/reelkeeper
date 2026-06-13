@@ -1,20 +1,18 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
+import { useData } from '../data/store'
 import { filterReels } from '../lib/search'
 import ReelCard from '../components/ReelCard'
 
 export default function Inbox() {
   const [query, setQuery] = useState('')
   const [unsortedOnly, setUnsortedOnly] = useState(false)
+  const { reels, tags, ready } = useData()
 
-  const reels = useLiveQuery(() => db.reels.orderBy('createdAt').reverse().toArray(), [], [])
-  const tags = useLiveQuery(() => db.tags.toArray(), [], [])
-  const tagsById = useMemo(() => new Map((tags ?? []).map((t) => [t.id, t])), [tags])
+  const tagsById = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags])
 
   const visible = useMemo(() => {
-    let r = reels ?? []
+    let r = [...reels].sort((a, b) => b.createdAt - a.createdAt)
     if (unsortedOnly) r = r.filter((x) => x.listIds.length === 0)
     return filterReels(r, query, tagsById)
   }, [reels, unsortedOnly, query, tagsById])
@@ -44,7 +42,9 @@ export default function Inbox() {
         Unsorted only
       </label>
 
-      {visible.length === 0 ? (
+      {!ready ? (
+        <p className="muted">Loading…</p>
+      ) : visible.length === 0 ? (
         <div className="empty">
           <p>No reels yet.</p>
           <p className="muted">

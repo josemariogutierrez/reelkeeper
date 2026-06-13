@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db, deleteList } from '../db'
+import { useData } from '../data/store'
 import { filterReels } from '../lib/search'
 import ReelCard from '../components/ReelCard'
 import ListMap from '../components/ListMap'
@@ -13,18 +12,16 @@ export default function ListView() {
   const navigate = useNavigate()
   const [view, setView] = useState<View>('grid')
   const [query, setQuery] = useState('')
+  const { lists, reels, tags, ready, deleteList } = useData()
 
-  const list = useLiveQuery(() => db.lists.get(id), [id])
-  const reels = useLiveQuery(
-    () => db.reels.where('listIds').equals(id).reverse().sortBy('createdAt'),
-    [id],
-    [],
+  const list = useMemo(() => lists.find((l) => l.id === id), [lists, id])
+  const listReels = useMemo(
+    () => reels.filter((r) => r.listIds.includes(id)).sort((a, b) => b.createdAt - a.createdAt),
+    [reels, id],
   )
-  const tags = useLiveQuery(() => db.tags.toArray(), [], [])
-  const tagsById = useMemo(() => new Map((tags ?? []).map((t) => [t.id, t])), [tags])
-
-  const visible = useMemo(() => filterReels(reels ?? [], query, tagsById), [reels, query, tagsById])
-  const locatedCount = (reels ?? []).filter((r) => r.location).length
+  const tagsById = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags])
+  const visible = useMemo(() => filterReels(listReels, query, tagsById), [listReels, query, tagsById])
+  const locatedCount = listReels.filter((r) => r.location).length
 
   const remove = async () => {
     if (confirm(`Delete list "${list?.name}"? Reels stay saved; they're just removed from this list.`)) {
@@ -33,8 +30,8 @@ export default function ListView() {
     }
   }
 
-  if (list === undefined) return <div className="page" />
-  if (list === null)
+  if (!ready) return <div className="page"><p className="muted">Loading…</p></div>
+  if (!list)
     return (
       <div className="page">
         <p className="muted">List not found.</p>
@@ -88,7 +85,7 @@ export default function ListView() {
           )}
         </>
       ) : (
-        <ListMap reels={reels ?? []} />
+        <ListMap reels={listReels} />
       )}
     </div>
   )

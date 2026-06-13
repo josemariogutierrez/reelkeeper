@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
+import { useData } from '../data/store'
 
 export default function TagPicker({
   value,
@@ -10,7 +9,7 @@ export default function TagPicker({
   onChange: (names: string[]) => void
 }) {
   const [input, setInput] = useState('')
-  const allTags = useLiveQuery(() => db.tags.toArray(), [], [])
+  const { tags } = useData()
 
   const add = (raw: string) => {
     const name = raw.trim().toLowerCase()
@@ -20,7 +19,7 @@ export default function TagPicker({
   }
   const remove = (name: string) => onChange(value.filter((n) => n !== name))
 
-  const suggestions = allTags
+  const suggestions = tags
     .map((t) => t.name)
     .filter((n) => !value.includes(n) && (!input || n.includes(input.toLowerCase())))
     .slice(0, 8)

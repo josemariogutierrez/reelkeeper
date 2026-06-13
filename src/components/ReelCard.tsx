@@ -1,18 +1,14 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
+import { useData } from '../data/store'
 import type { Reel } from '../types'
 
 export default function ReelCard({ reel }: { reel: Reel }) {
-  const tagNames =
-    useLiveQuery(
-      async () => {
-        const tags = await db.tags.bulkGet(reel.tagIds)
-        return tags.filter(Boolean).map((t) => t!.name)
-      },
-      [reel.tagIds.join(',')],
-      [] as string[],
-    ) ?? []
+  const { tags } = useData()
+  const tagNames = useMemo(() => {
+    const byId = new Map(tags.map((t) => [t.id, t.name]))
+    return reel.tagIds.map((id) => byId.get(id)).filter(Boolean) as string[]
+  }, [tags, reel.tagIds])
 
   return (
     <Link to={`/reel/${reel.id}`} className="card">

@@ -1,16 +1,17 @@
+import { useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db, deleteReel } from '../db'
+import { useData } from '../data/store'
 import Embed from '../components/Embed'
 import ReelEditor from '../components/ReelEditor'
 
 export default function ReelDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const reel = useLiveQuery(() => db.reels.get(id), [id])
+  const { reels, ready, deleteReel } = useData()
+  const reel = useMemo(() => reels.find((r) => r.id === id), [reels, id])
 
-  if (reel === undefined) return <div className="page" />
-  if (reel === null)
+  if (!ready) return <div className="page"><p className="muted">Loading…</p></div>
+  if (!reel)
     return (
       <div className="page">
         <p className="muted">Reel not found.</p>

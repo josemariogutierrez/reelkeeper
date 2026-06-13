@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db, saveReel } from '../db'
+import { useData } from '../data/store'
 import { parseShare } from '../lib/instagram'
 import ReelEditor from '../components/ReelEditor'
 
@@ -14,6 +13,7 @@ type Status =
 export default function AddReel() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const { reels, saveReel } = useData()
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const [manual, setManual] = useState('')
 
@@ -21,10 +21,7 @@ export default function AddReel() {
   const incoming = params.get('url') || params.get('text') || params.get('title')
 
   const savedId = status.kind === 'saved' ? status.id : null
-  const reel = useLiveQuery(
-    () => (savedId ? db.reels.get(savedId) : undefined),
-    [savedId],
-  )
+  const reel = useMemo(() => reels.find((r) => r.id === savedId), [reels, savedId])
 
   const doSave = async (raw: string) => {
     const parsed = parseShare(raw)
@@ -34,7 +31,8 @@ export default function AddReel() {
     }
     setStatus({ kind: 'saving' })
     try {
-      const caption = params.get('text') && params.get('text') !== parsed.url ? params.get('text')! : undefined
+      const text = params.get('text')
+      const caption = text && text !== parsed.url ? text : undefined
       const { id, deduped } = await saveReel({ ...parsed, caption })
       setStatus({ kind: 'saved', id, deduped })
     } catch (e) {

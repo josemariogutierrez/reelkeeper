@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db, setReelLists, setReelTagsByName, updateReel } from '../db'
+import { useEffect, useMemo, useState } from 'react'
+import { useData } from '../data/store'
 import type { Reel, ReelLocation } from '../types'
 import ListPicker from './ListPicker'
 import TagPicker from './TagPicker'
@@ -8,6 +7,7 @@ import LocationEditor from './LocationEditor'
 
 /** Edits title/note/lists/tags/location for a reel and persists changes inline. */
 export default function ReelEditor({ reel }: { reel: Reel }) {
+  const { tags, updateReel, setReelLists, setReelTagsByName } = useData()
   const [title, setTitle] = useState(reel.title ?? '')
   const [note, setNote] = useState(reel.note ?? '')
 
@@ -16,16 +16,10 @@ export default function ReelEditor({ reel }: { reel: Reel }) {
     setNote(reel.note ?? '')
   }, [reel.id]) // re-sync when editing a different reel
 
-  // resolve current tag ids -> names for the picker
-  const tagNames =
-    useLiveQuery(
-      async () => {
-        const tags = await db.tags.bulkGet(reel.tagIds)
-        return tags.filter(Boolean).map((t) => t!.name)
-      },
-      [reel.tagIds.join(',')],
-      [] as string[],
-    ) ?? []
+  const tagNames = useMemo(() => {
+    const byId = new Map(tags.map((t) => [t.id, t.name]))
+    return reel.tagIds.map((id) => byId.get(id)).filter(Boolean) as string[]
+  }, [tags, reel.tagIds])
 
   return (
     <div className="editor">

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { createList, db } from '../db'
+import { useData } from '../data/store'
 
 export default function ListPicker({
   value,
@@ -10,7 +9,9 @@ export default function ListPicker({
   onChange: (ids: string[]) => void
 }) {
   const [newName, setNewName] = useState('')
-  const lists = useLiveQuery(() => db.lists.orderBy('createdAt').toArray(), [], [])
+  const { lists, createList } = useData()
+
+  const ordered = [...lists].sort((a, b) => a.createdAt - b.createdAt)
 
   const toggle = (id: string) =>
     onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id])
@@ -27,7 +28,7 @@ export default function ListPicker({
     <div className="field">
       <label className="field__label">Lists</label>
       <div className="chips">
-        {lists.map((l) => (
+        {ordered.map((l) => (
           <button
             key={l.id}
             type="button"
@@ -37,7 +38,7 @@ export default function ListPicker({
             {l.name}
           </button>
         ))}
-        {lists.length === 0 && <span className="muted">No lists yet — create one below.</span>}
+        {ordered.length === 0 && <span className="muted">No lists yet — create one below.</span>}
       </div>
       <div className="row">
         <input
